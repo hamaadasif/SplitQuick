@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 248 250 252;
+  --foreground: 15 23 42;
+}
+
+@layer base {
+  html, body {
+    height: 100%;
+  }
+}
+
+@layer components {
+  .page {
+    @apply min-h-screen bg-slate-50;
+  }
+
+  .page-container {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .card {
+    @apply rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/60;
+  }
+
+  .card-header {
+    @apply flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4;
+  }
+
+  .card-body {
+    @apply px-5 py-4;
+  }
+
+  .h1 {
+    @apply text-2xl font-semibold tracking-tight text-slate-900;
+  }
+
+  .h2 {
+    @apply text-lg font-semibold tracking-tight text-slate-900;
+  }
+
+  .muted {
+    @apply text-sm text-slate-500;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium
+           transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-blue-600 text-white hover:bg-blue-700;
+  }
+
+  .btn-secondary {
+    @apply btn bg-slate-100 text-slate-900 hover:bg-slate-200;
+  }
+
+  .btn-danger {
+    @apply btn bg-rose-600 text-white hover:bg-rose-700;
+  }
+
+  .btn-success {
+    @apply btn bg-emerald-600 text-white hover:bg-emerald-700;
+  }
+
+  .field {
+    @apply flex flex-col gap-1.5;
+  }
+
+  .label {
+    @apply text-sm font-medium text-slate-700;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm
+           outline-none transition placeholder:text-slate-400
+           focus:border-blue-400 focus:ring-4 focus:ring-blue-100;
+  }
+
+  .select {
+    @apply input pr-10;
+  }
+
+  .textarea {
+    @apply input min-h-[96px] resize-none;
+  }
+
+  .helper-error {
+    @apply text-sm text-rose-600;
+  }
+
+  .modal-backdrop {
+    @apply fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4;
+  }
+
+  .modal-panel {
+    @apply w-full max-w-lg rounded-2xl bg-white shadow-xl ring-1 ring-slate-200/60;
+  }
+
+  .modal-head {
+    @apply flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4;
+  }
+
+  .modal-title {
+    @apply text-base font-semibold text-slate-900;
+  }
+
+  .modal-body {
+    @apply px-5 py-4;
+  }
+
+  .modal-actions {
+    @apply flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 px-5 py-4;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+
+  .badge-green {
+    @apply badge bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/60;
+  }
+
+  .badge-amber {
+    @apply badge bg-amber-50 text-amber-700 ring-1 ring-amber-200/60;
+  }
+
+  .badge-rose {
+    @apply badge bg-rose-50 text-rose-700 ring-1 ring-rose-200/60;
+  }
+}
