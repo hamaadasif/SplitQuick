@@ -4,8 +4,18 @@ import { useAuth } from "../../hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { signOut } from "firebase/auth";
-import {  doc, getDoc, updateDoc, deleteField, collection, getDocs, query, orderBy } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  updateDoc,
+  deleteField,
+  collection,
+  getDocs,
+  query,
+  orderBy,
+} from "firebase/firestore";
 import { auth, db } from "../../lib/firebaseConfig";
+
 import DashboardHeader from "../../components/Dashboard/DashboardHeader";
 import ContactsList from "../../components/Dashboard/ContactsList";
 import IncomingRequests from "../../components/Dashboard/IncomingRequests";
@@ -24,11 +34,13 @@ export default function Dashboard() {
   const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
   const [outgoingRequests, setOutgoingRequests] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
+
   const [showAddDebtModal, setShowAddDebtModal] = useState(false);
   const [showAddContactModal, setShowAddContactModal] = useState(false);
   const [showSettleModal, setShowSettleModal] = useState(false);
   const [showTransactionHistoryModal, setShowTransactionHistoryModal] =
     useState(false);
+
   const [selectedContact, setSelectedContact] = useState<any>(null);
   const [showUserDetailsModal, setShowUserDetailsModal] = useState(false);
 
@@ -67,21 +79,17 @@ export default function Dashboard() {
           );
 
           setIncomingRequests(
-            Object.entries(data.incomingRequests || {}).map(
-              ([id, details]) => ({
-                id,
-                ...(details as any),
-              })
-            )
+            Object.entries(data.incomingRequests || {}).map(([id, details]) => ({
+              id,
+              ...(details as any),
+            }))
           );
 
           setOutgoingRequests(
-            Object.entries(data.outgoingRequests || {}).map(
-              ([id, details]) => ({
-                id,
-                ...(details as any),
-              })
-            )
+            Object.entries(data.outgoingRequests || {}).map(([id, details]) => ({
+              id,
+              ...(details as any),
+            }))
           );
         }
       }
@@ -91,30 +99,30 @@ export default function Dashboard() {
   };
 
   const fetchTransactions = async (uid: string, contactId: string) => {
-  try {
-    const transactionsRef = collection(
-      db,
-      `contacts/${uid}/contacts/${contactId}/transactions`
-    );
-    const qRef = query(transactionsRef, orderBy("createdAt", "desc"));
-    const snap = await getDocs(qRef);
+    try {
+      const transactionsRef = collection(
+        db,
+        `contacts/${uid}/contacts/${contactId}/transactions`
+      );
+      const qRef = query(transactionsRef, orderBy("createdAt", "desc"));
+      const snap = await getDocs(qRef);
 
-    setTransactions(
-      snap.docs.map((d) => {
-        const data = d.data() as any;
-        return {
-          id: d.id,
-          amount: data.amount ?? null,
-          signedAmount: data.signedAmount ?? null,
-          description: data.description ?? null,
-          createdAt: data.createdAt ?? null,
-        };
-      })
-    );
-  } catch (err) {
-    console.error("Error fetching transactions:", err);
-  }
-};
+      setTransactions(
+        snap.docs.map((d) => {
+          const data = d.data() as any;
+          return {
+            id: d.id,
+            amount: data.amount ?? null,
+            signedAmount: data.signedAmount ?? null,
+            description: data.description ?? null,
+            createdAt: data.createdAt ?? null,
+          };
+        })
+      );
+    } catch (err) {
+      console.error("Error fetching transactions:", err);
+    }
+  };
 
   const handleDeclineRequest = async (request: any) => {
     try {
@@ -161,8 +169,8 @@ export default function Dashboard() {
             {showAddDebtModal && (
               <AddDebtModal
                 uid={user.uid}
-                contacts={contacts}
                 onClose={() => setShowAddDebtModal(false)}
+                prefillContactId={selectedContact?.id}
               />
             )}
 
@@ -194,7 +202,10 @@ export default function Dashboard() {
 
             <div className="flex flex-wrap gap-3">
               <button
-                onClick={() => setShowAddDebtModal(true)}
+                onClick={() => {
+                  setSelectedContact(null);
+                  setShowAddDebtModal(true);
+                }}
                 className="btn-success"
               >
                 + Add Debt
@@ -227,11 +238,14 @@ export default function Dashboard() {
                 fetchTransactions(user.uid, contact.id);
                 setShowTransactionHistoryModal(true);
               }}
+              onAddDebt={(contact) => {
+                setSelectedContact(contact);
+                setShowAddDebtModal(true);
+              }}
             />
           </>
         )}
       </div>
     </main>
   );
-
 }

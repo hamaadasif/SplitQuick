@@ -17,10 +17,12 @@ export default function ContactsList({
   contacts,
   onSettle,
   onViewHistory,
+  onAddDebt,
 }: {
   contacts: Contact[];
   onSettle: (contact: Contact) => void;
   onViewHistory: (contact: Contact) => void;
+  onAddDebt?: (contact: Contact) => void;
 }) {
   const [nameCache, setNameCache] = useState<Record<string, string>>({});
 
@@ -132,6 +134,8 @@ export default function ContactsList({
               const initial =
                 (c.label || "U").trim().charAt(0).toUpperCase() || "U";
 
+              const isSettled = c.status === "settled" || c.net === 0;
+
               return (
                 <li
                   key={c.id}
@@ -172,11 +176,20 @@ export default function ContactsList({
                       >
                         View History
                       </button>
+
                       <button
-                        onClick={() => onSettle(c)}
+                        onClick={() =>
+                          isSettled ? onAddDebt?.(c) : onSettle(c)
+                        }
                         className="btn-primary"
+                        disabled={isSettled && !onAddDebt}
+                        title={
+                          isSettled && !onAddDebt
+                            ? "Add debt action not wired"
+                            : undefined
+                        }
                       >
-                        Settle Debt
+                        {isSettled ? "Add Debt" : "Settle Debt"}
                       </button>
                     </div>
                   </div>

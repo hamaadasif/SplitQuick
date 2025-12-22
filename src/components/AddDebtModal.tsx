@@ -22,9 +22,13 @@ type ContactItem = {
 export default function AddDebtModal({
   uid,
   onClose,
+  prefillContactId,
+  contacts: _unusedContacts,
 }: {
   uid: string;
   onClose: () => void;
+  prefillContactId?: string;
+  contacts?: any[];
 }) {
   const [contacts, setContacts] = useState<ContactItem[]>([]);
   const [selectedContactId, setSelectedContactId] = useState("");
@@ -59,9 +63,20 @@ export default function AddDebtModal({
         type: "pending",
       }));
 
-      setContacts([...confirmed, ...pending]);
+      const all = [...confirmed, ...pending];
+      setContacts(all);
+
+      if (prefillContactId && all.some((c) => c.id === prefillContactId)) {
+        setSelectedContactId(prefillContactId);
+      }
     })();
-  }, [uid]);
+  }, [uid, prefillContactId]);
+
+  useEffect(() => {
+    if (!prefillContactId) return;
+    if (!contacts.some((c) => c.id === prefillContactId)) return;
+    setSelectedContactId(prefillContactId);
+  }, [prefillContactId, contacts]);
 
   const selectedContact = useMemo(
     () => contacts.find((c) => c.id === selectedContactId),
@@ -118,7 +133,7 @@ export default function AddDebtModal({
       );
       await addDoc(myTxRef, {
         amount: debtAmount,
-        signedAmount,                 // positive => they owe me; negative => I owe
+        signedAmount,
         description: description || null,
         createdAt: serverTimestamp(),
         createdBy: uid,
@@ -130,7 +145,7 @@ export default function AddDebtModal({
       );
       await addDoc(theirTxRef, {
         amount: debtAmount,
-        signedAmount: -signedAmount,  // mirrored view
+        signedAmount: -signedAmount,
         description: description || null,
         createdAt: serverTimestamp(),
         createdBy: uid,
@@ -154,7 +169,8 @@ export default function AddDebtModal({
 
         await updateDoc(otherContactsRef, {
           [`contacts.${uid}.netDebt`]: otherNewNet,
-          [`contacts.${uid}.status`]: otherNewNet === 0 ? "settled" : "unsettled",
+          [`contacts.${uid}.status`]:
+            otherNewNet === 0 ? "settled" : "unsettled",
         });
       }
 
@@ -226,7 +242,7 @@ export default function AddDebtModal({
             <label className="label">Description (optional)</label>
             <input
               type="text"
-              placeholder="Dinner, rent, tickets..."
+              placeholder="Dinner, rent, tickets."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="input"
@@ -236,11 +252,7 @@ export default function AddDebtModal({
           {error && <p className="helper-error">{error}</p>}
 
           <div className="modal-actions">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-secondary"
-            >
+            <button type="button" onClick={onClose} className="btn-secondary">
               Cancel
             </button>
             <button type="submit" className="btn-success">
