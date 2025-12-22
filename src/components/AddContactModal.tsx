@@ -40,7 +40,9 @@ export default function AddContactModal({
     e.preventDefault();
     setError("");
 
-    if (!email) {
+    const normalizedEmail = (email || "").trim().toLowerCase();
+
+    if (!normalizedEmail) {
       setError("Please enter the contact's email.");
       return;
     }
@@ -52,12 +54,19 @@ export default function AddContactModal({
         setError("Your account information could not be retrieved.");
         return;
       }
-      const currentUserData = currentUserDoc.data();
-      const currentUserName = currentUserData.name || "Unknown Name";
-      const currentUserEmail = currentUserData.email;
+
+      const currentUserData = currentUserDoc.data() as any;
+      const currentUserName = (currentUserData.name || "Unknown Name").toString();
+      const currentUserEmail = (currentUserData.email || "").toString().trim().toLowerCase();
+
+      if (currentUserEmail && normalizedEmail === currentUserEmail) {
+        setError("You can't add yourself as a contact.");
+        return;
+      }
 
       const userContactsDocRef = doc(db, "contacts", uid);
       const userContactsDoc = await getDoc(userContactsDocRef);
+
       if (!userContactsDoc.exists()) {
         await setDoc(userContactsDocRef, {
           userId: uid,
@@ -67,32 +76,44 @@ export default function AddContactModal({
         });
       }
 
+      const userContactsSnap = await getDoc(userContactsDocRef);
+      const myContactsData = (userContactsSnap.data() || {}) as any;
+      const myContactsMap = myContactsData.contacts || {};
+      const myOutgoingMap = myContactsData.outgoingRequests || {};
+      const myIncomingMap = myContactsData.incomingRequests || {};
+
       const usersCollectionRef = collection(db, "users");
-      const q = query(usersCollectionRef, where("email", "==", email));
+      const q = query(usersCollectionRef, where("email", "==", normalizedEmail));
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
-        const ghostId = `ghost-${email}`;
+        const ghostId = `ghost-${normalizedEmail}`;
+
+        if (myContactsMap?.[ghostId]) {
+          setError("You already have this contact added.");
+          return;
+        }
 
         const ghostData = {
-          name: email,
-          email,
+          name: normalizedEmail,
+          email: normalizedEmail,
           netDebt: 0,
           status: "settled",
           ghost: true,
         };
+
         await updateDoc(userContactsDocRef, {
           [`contacts.${ghostId}`]: ghostData,
         });
 
-        const ghostLedgerId = makeGhostLedgerId(uid, email);
+        const ghostLedgerId = makeGhostLedgerId(uid, normalizedEmail);
         await setDoc(
           doc(db, "ledgers", ghostLedgerId),
           {
             participants: [uid],
             status: "ghost",
             createdBy: uid,
-            inviteEmail: email,
+            inviteEmail: normalizedEmail,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           },
@@ -106,9 +127,24 @@ export default function AddContactModal({
 
       const contactDoc = querySnapshot.docs[0];
       const contactId = contactDoc.id;
-      const contactData = contactDoc.data();
-      const contactName = contactData.name || "Unknown Name";
-      const contactEmail = contactData.email;
+      const contactData = contactDoc.data() as any;
+      const contactName = (contactData.name || "Unknown Name").toString();
+      const contactEmail = (contactData.email || normalizedEmail).toString();
+
+      if (myContactsMap?.[contactId]) {
+        setError("You already have this user added.");
+        return;
+      }
+
+      if (myOutgoingMap?.[contactId]) {
+        setError("You already have a pending request to this user.");
+        return;
+      }
+
+      if (myIncomingMap?.[contactId]) {
+        setError("This user already sent you a request. Check Incoming Requests.");
+        return;
+      }
 
       await updateDoc(userContactsDocRef, {
         [`outgoingRequests.${contactId}`]: {
@@ -127,6 +163,7 @@ export default function AddContactModal({
           outgoingRequests: {},
         });
       }
+
       await updateDoc(contactContactsDocRef, {
         [`incomingRequests.${uid}`]: {
           name: currentUserName,
@@ -180,11 +217,7 @@ export default function AddContactModal({
           {error && <p className="helper-error">{error}</p>}
 
           <div className="modal-actions">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-secondary"
-            >
+            <button type="button" onClick={onClose} className="btn-secondary">
               Cancel
             </button>
             <button type="submit" className="btn-primary">

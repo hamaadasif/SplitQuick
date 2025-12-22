@@ -126,17 +126,23 @@ export default function Dashboard() {
 
   const handleDeclineRequest = async (request: any) => {
     try {
-      if (!user?.uid) return;
-      const contactsDocRef = doc(db, "contacts", user.uid);
+        if (!user?.uid) return;
 
-      await updateDoc(contactsDocRef, {
-        [`incomingRequests.${request.id}`]: deleteField(),
-      });
+        const myUid = user.uid;
+        const otherUid = request.id;
 
-      fetchContactsAndRequests(user.uid);
-    } catch (err) {
-      console.error("Error declining request:", err);
-    }
+        await updateDoc(doc(db, "contacts", myUid), {
+          [`incomingRequests.${otherUid}`]: deleteField(),
+        });
+
+        await updateDoc(doc(db, "contacts", otherUid), {
+          [`outgoingRequests.${myUid}`]: deleteField(),
+        });
+
+        fetchContactsAndRequests(myUid);
+      } catch (err) {
+        console.error("Error declining request:", err);
+      }
   };
 
   const handleLogout = async () => {
