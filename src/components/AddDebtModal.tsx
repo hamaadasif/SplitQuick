@@ -39,35 +39,70 @@ export default function AddDebtModal({
 
   useEffect(() => {
     (async () => {
-      const userContactsDoc = await getDoc(doc(db, "contacts", uid));
-      if (!userContactsDoc.exists()) return;
+      try {
+        const userContactsDoc = await getDoc(doc(db, "contacts", uid));
+        if (!userContactsDoc.exists()) {
+          setContacts([]);
+          return;
+        }
 
-      const data = userContactsDoc.data() || {};
+        const data = userContactsDoc.data() || {};
 
-      const confirmed: ContactItem[] = Object.entries(data.contacts || {}).map(
-        ([id, v]: any) => ({
-          id,
-          name: v.name || v.email || "Unknown",
-          email: v.email,
-          ghost: !!v.ghost,
-          type: v.ghost ? "ghost" : "confirmed",
-        })
-      );
+        const confirmedBase: ContactItem[] = Object.entries(data.contacts || {}).map(
+          ([id, v]: any) => ({
+            id,
+            name: (v?.name || "").toString().trim() || "Unknown",
+            email: (v?.email || "").toString().trim() || "",
+            ghost: !!v?.ghost,
+            type: v?.ghost ? "ghost" : "confirmed",
+          })
+        );
 
-      const pending: ContactItem[] = Object.entries(
-        data.outgoingRequests || {}
-      ).map(([id, v]: any) => ({
-        id,
-        name: v.name || v.email || "Unknown",
-        email: v.email,
-        type: "pending",
-      }));
+        const pendingBase: ContactItem[] = Object.entries(data.outgoingRequests || {}).map(
+          ([id, v]: any) => ({
+            id,
+            name: (v?.name || v?.email || "Unknown").toString().trim(),
+            email: (v?.email || "").toString().trim(),
+            type: "pending",
+          })
+        );
 
-      const all = [...confirmed, ...pending];
-      setContacts(all);
+        const confirmedHydrated = await Promise.all(
+          confirmedBase.map(async (c) => {
+            if (c.type !== "confirmed") return c;
 
-      if (prefillContactId && all.some((c) => c.id === prefillContactId)) {
-        setSelectedContactId(prefillContactId);
+            try {
+              const userSnap = await getDoc(doc(db, "users", c.id));
+              if (!userSnap.exists()) return c;
+
+              const u = userSnap.data() as any;
+              const fetchedName = (u?.name || "").toString().trim();
+              const fetchedEmail = (u?.email || "").toString().trim();
+
+              return {
+                ...c,
+                name: fetchedName || c.name || "Unknown",
+                email: fetchedEmail || c.email || "",
+              };
+            } catch (e) {
+              console.error("Failed to hydrate contact from users doc:", c.id, e);
+              return c;
+            }
+          })
+        );
+
+        const all = [...confirmedHydrated, ...pendingBase];
+
+        all.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+        setContacts(all);
+
+        if (prefillContactId && all.some((x) => x.id === prefillContactId)) {
+          setSelectedContactId(prefillContactId);
+        }
+      } catch (e) {
+        console.error("Failed loading contacts for AddDebtModal:", e);
+        setContacts([]);
       }
     })();
   }, [uid, prefillContactId]);
@@ -151,8 +186,8 @@ export default function AddDebtModal({
         createdBy: uid,
       });
 
-      const meData = meContactsSnap.data()!;
-      const myContactEntry = meData.contacts?.[otherUid] || {};
+      const meData = meContactsSnap.data() as any;
+      const myContactEntry = meData?.contacts?.[otherUid] || {};
       const myNewNet = (myContactEntry.netDebt || 0) + signedAmount;
 
       await updateDoc(meContactsRef, {
@@ -163,8 +198,8 @@ export default function AddDebtModal({
       const otherContactsRef = doc(db, "contacts", otherUid);
       const otherContactsSnap = await getDoc(otherContactsRef);
       if (otherContactsSnap.exists()) {
-        const otherData = otherContactsSnap.data()!;
-        const otherEntry = otherData.contacts?.[uid] || {};
+        const otherData = otherContactsSnap.data() as any;
+        const otherEntry = otherData?.contacts?.[uid] || {};
         const otherNewNet = (otherEntry.netDebt || 0) - signedAmount;
 
         await updateDoc(otherContactsRef, {
@@ -203,7 +238,7 @@ export default function AddDebtModal({
               <option value="">Select a contact</option>
               {contacts.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} ({c.email})
+                  {c.name || "Unknown"} ({c.email || ""})
                   {c.type === "ghost" ? " • ghost" : ""}
                   {c.type === "pending" ? " • pending" : ""}
                 </option>
@@ -242,7 +277,7 @@ export default function AddDebtModal({
             <label className="label">Description (optional)</label>
             <input
               type="text"
-              placeholder="Dinner, rent, tickets."
+              placeholder="Dinner, rent, tickets..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="input"
